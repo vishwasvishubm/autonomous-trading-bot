@@ -83,9 +83,21 @@ def _exit(t: str, pos, action: str, prio: int, reason: str, sig: Signal, check: 
                                      "unrealized": round((sig.feats["close"] - pos.avg_price) * pos.qty, 2)}})
 
 
-def _core_qty(sig: Signal, wealth: float, n: int, p: StrategyParams, avg_price: float | None = None,
+def _core_shares(signals: dict[str, Signal], p: StrategyParams) -> dict[str, float]:
+    """Each core stock's share of the core (sums to 1). Weak stocks get none."""
+    core = [s for s in signals.values() if not s.weak] or list(signals.values())
+    if p.core_weighting == "inverse_vol":
+        raw = {s.ticker: max(s.feats.get("vol_long", 0.0), 1e-4) ** -p.inv_vol_power for s in core}
+    else:
+        raw = {s.ticker: 1.0 for s in core}
+    total = sum(raw.values()) or 1.0
+    return {t: v / total for t, v in raw.items()}
+
+
+def _core_qty(sig: Signal, wealth: float, n: float, p: StrategyParams, avg_price: float | None = None,
               mult: float = 1.0) -> int:
-    """Shares of the passive core this stock may keep (0 = no core).
+    """Shares of the passive core this stock may keep (0 = no core). `n` = 1 / the stock's
+    share of the core (the number of stocks when the core is split equally).
 
     Valued at the lower of today's price and our cost, so a winner's core is never
     trimmed just because it went up (that would be rebalancing out of the leaders,
@@ -152,6 +164,8 @@ def plan(ledger: Ledger, signals: dict[str, Signal], d: str, day: int, p: Strate
     n_universe = len(signals)
     # the passive core is spread over the stocks that are not weak (weak ones are short candidates)
     n_core = sum(1 for s in signals.values() if not s.weak) or n_universe
+    shares = _core_shares(signals, p)
+    core_n = {t: 1.0 / v for t, v in shares.items()}         # per stock, for _core_qty
 
     # ---- 0/1: exits ----------------------------------------------------------
     for t, pos in ledger.positions.items():
@@ -166,7 +180,7 @@ def plan(ledger: Ledger, signals: dict[str, Signal], d: str, day: int, p: Strate
             closing.add(t)
             continue
         if pos.qty > 0:
-            core = _core_qty(sig, wealth, n_core, p, pos.avg_price, risk.core_mult)
+            core = _core_qty(sig, wealth, core_n.get(t, 0.0), p, pos.avg_price, risk.core_mult)
             if risk.core_mult < 1.0 and pos.qty > core and t not in closing:
                 it = _exit(t, pos, "SELL", 0, f"risk guard {risk.mode}: core cut to x{risk.core_mult:g}",
                            sig, f"risk:{risk.mode}")
@@ -305,7 +319,7 @@ def plan(ledger: Ledger, signals: dict[str, Signal], d: str, day: int, p: Strate
             pos = ledger.positions.get(t)
             conviction = None
             checks: list[str] = []
-            core = (_core_qty(sig, wealth, n_core, p, pos.avg_price if pos else None, risk.core_mult)
+            core = (_core_qty(sig, wealth, core_n.get(t, 0.0), p, pos.avg_price if pos else None, risk.core_mult)
                     if sig.score > p.core_min_score else 0)
             core_val = core * c
             if (sig.score < p.long_entry or not p.tactical) and core and (pos is None or pos.qty > 0):
@@ -381,7 +395,9 @@ def plan(ledger: Ledger, signals: dict[str, Signal], d: str, day: int, p: Strate
                                   "limited_by": limited},
                        "checks": checks, "reasons": sig.reasons}
             if limited == "core weight":
-                reason = (f"core position: {p.core_weight:.0%} of wealth spread over {n_core} stocks "
+                spread = (f"spread over {n_core} stocks" if p.core_weighting == "equal" else
+                          f"weighted by inverse volatility over {n_core} stocks: {shares.get(t, 0):.1%} here")
+                reason = (f"core position: {p.core_weight:.0%} of wealth {spread} "
                           f"(held through dips; score {sig.score:+.2f})")
                 explain["type"] = "core"
             else:

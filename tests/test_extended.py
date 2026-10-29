@@ -1135,3 +1135,14 @@ class ConservativeHoldingPeriodTests(unittest.TestCase):
         led.positions["W"].stop = 100.0
         self.assertEqual(led.positions["W"].last_buy_date, "2025-03-01")
         self.assertFalse([i for i in plan(led, sigs, "2025-06-02", 300, p) if i.ticker == "W"])
+
+
+class CoreWeightingTests(unittest.TestCase):
+    def test_inverse_vol_gives_calm_stocks_more_and_equal_is_default(self):
+        from trader.planner import _core_shares
+        sigs = {"CALM": sig("CALM", 0.0, vol_long=0.01), "WILD": sig("WILD", 0.0, vol_long=0.04)}
+        eq = _core_shares(sigs, StrategyParams())
+        self.assertEqual(eq, {"CALM": 0.5, "WILD": 0.5})
+        iv = _core_shares(sigs, replace(StrategyParams(), core_weighting="inverse_vol"))
+        self.assertAlmostEqual(sum(iv.values()), 1.0)
+        self.assertAlmostEqual(iv["CALM"], 0.8)

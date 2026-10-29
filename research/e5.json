@@ -1,0 +1,5 @@
+{
+ "equal (current)": {},
+ "inverse_vol p=1": {"core_weighting": "inverse_vol"},
+ "inverse_vol p=0.5": {"core_weighting": "inverse_vol", "inv_vol_power": 0.5}
+}

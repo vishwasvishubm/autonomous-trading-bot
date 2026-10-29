@@ -123,5 +123,6 @@ def features(bars: Sequence[dict], p) -> dict | None:
         "atr_pct": a / c if c else 0.0,
         "mom": mom,
         "mom_long": mom_long,
+        "vol_long": rv_l,                 # stdev of daily returns over rs_window (core weighting)
         "vol_ratio": (vols[-1] / avg_vol) if avg_vol > 0 else 1.0,
     }

@@ -107,6 +107,10 @@ class StrategyParams:
     # (research/RESULTS.md, e1-e3): the tactical layer cost ~5-10 points on average.
     core_weight: float = 0.99
     core_min_score: float = -1.0        # don't build a core position in a stock scoring below this
+    # "equal": the core is split equally; "inverse_vol": each stock gets a share proportional to
+    # 1 / (its daily volatility over rs_window) ** inv_vol_power (calm stocks get more money)
+    core_weighting: str = "equal"
+    inv_vol_power: float = 1.0
     core_regime_filter: bool = False    # False = the core is held through downtrends too (buy & hold)
     # Hedge sleeve. A short needs a stock we don't hold, and the core holds every stock, so
     # with weak_bottom_k = 0 shorts cannot open (the default: in every test window shorting

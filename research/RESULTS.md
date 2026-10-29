@@ -89,3 +89,28 @@ design is profile `active`.
 32 episodes (e4): 97% core / 2% cash: mean +99.9%, worst +41.6%, util 97.2%. After: mean
 **+101.5%**, worst **+42.6%**, util **98.7%**. Both rows ran with 10 orders/day (`.env` overrides the
 environment), so the day-1 effect is in both; the earlier 6-orders run (e3) had worst +38.2%.
+
+## Two last candidates (2026-10-30)
+
+**Inverse-volatility core** (`core_weighting="inverse_vol"`, e5, 32 episodes): calm stocks get more money.
+
+| Weighting | Mean after-tax % | Worst | Mean max DD |
+|---|---|---|---|
+| equal (default) | **101.5** | **42.6** | 24.9 |
+| inverse vol, power 0.5 | 84.4 | 31.4 | 23.0 |
+| inverse vol, power 1 | 65.4 | 22.3 | 20.6 |
+
+Lower drawdowns, but much lower returns: in this data the volatile stocks (PLNX) were the winners. Rejected; the option stays, off.
+
+**Does the news predict prices?** (`research/news_check.py`, 8,125 recorded headlines over the 500 SimTest days)
+- Most headlines are unrelated world news tagged to a ticker (e.g. US politics under ORCX, an album review under SONA). 56% score exactly 0.
+- Returns relative to the 10-stock average, 2,895 stock-days with news:
+
+| Horizon | Pearson | t-stat | After positive / negative news |
+|---|---|---|---|
+| same day | 0.046 | 2.48 | +0.22% / −0.07% |
+| next day (what the bot can trade) | 0.010 | 0.56 | −0.01% / −0.07% |
+| next 5 days | 0.052 | 2.77 | +0.26% / −0.38% |
+
+- The bot's decayed news score vs the next day's return: t = 1.29.
+- Verdict: no edge on the day the bot can trade. The 5-day hint is weak, because overlapping windows and testing 3 horizons inflate the t-stat, and it comes from one dataset. Trading it would mean selling the core (fees, 15% STCG), so news stays a logged, explained input, not a trade trigger.
