@@ -1,0 +1,12 @@
+{
+ "base": {},
+ "core90": {"core_weight": 0.9, "max_long_exposure": 0.97},
+ "sh_any": {"short_max_breadth": 1.0, "max_long_exposure": 0.85},
+ "sh_any_strict": {"short_max_breadth": 1.0, "max_long_exposure": 0.85, "rip_min_rsi": 70, "rip_min_z": 1.5, "rip_require_both": true},
+ "sh_any_c70": {"short_max_breadth": 1.0, "core_weight": 0.7, "max_long_exposure": 0.80},
+ "sh_any_c70_strict": {"short_max_breadth": 1.0, "core_weight": 0.7, "max_long_exposure": 0.80, "rip_min_rsi": 70, "rip_min_z": 1.5, "rip_require_both": true},
+ "sh_mom_any": {"short_max_breadth": 1.0, "short_style": "momentum", "max_long_exposure": 0.85},
+ "sh_b50": {"short_max_breadth": 0.5, "max_long_exposure": 0.85},
+ "rs15": {"w_rs": 0.15},
+ "sh_any_pct10": {"short_max_breadth": 1.0, "max_long_exposure": 0.85, "max_short_pct": 0.10}
+}

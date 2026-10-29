@@ -1,0 +1,6 @@
+{
+ "core97_cap30": {},
+ "band02": {"rebalance_band": 0.02},
+ "band01": {"rebalance_band": 0.01},
+ "band03": {"rebalance_band": 0.03}
+}

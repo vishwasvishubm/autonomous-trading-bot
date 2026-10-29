@@ -1,0 +1,12 @@
+{"baseline": {"dd_soft":1.0,"dd_hard":1.0,"daily_loss_limit":1.0,"short_stop_atr":2.5,"short_news_veto":9},
+ "guard": {},
+ "rs15": {"w_rs":0.15},
+ "rs30": {"w_rs":0.3},
+ "hold": {"trend_hold":true},
+ "rs30_hold": {"w_rs":0.3,"trend_hold":true},
+ "rsi_cap70": {"max_entry_rsi":70},
+ "short_both": {"rip_require_both":true},
+ "short_stop15": {"short_stop_atr":1.5},
+ "noshort": {"enable_shorts":false},
+ "expo90": {"max_long_exposure":0.9,"max_gross_exposure":0.95,"max_position_pct":0.2}
+}

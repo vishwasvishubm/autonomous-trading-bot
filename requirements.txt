@@ -1,0 +1,7 @@
+# bot
+kafka-python>=2.0.3
+requests>=2.28
+python-dotenv>=1.0
+# backtest analysis + dashboard (already in Anaconda)
+pandas>=2.0
+streamlit>=1.30

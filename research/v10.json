@@ -1,0 +1,12 @@
+{
+ "base": {},
+ "w2_b30_rip": {"weak_bottom_k": 2, "weak_max_breadth": 0.3, "short_weak_only": true, "short_max_breadth": 0.3},
+ "w3_b30_rip": {"weak_bottom_k": 3, "weak_max_breadth": 0.3, "short_weak_only": true, "short_max_breadth": 0.3},
+ "w2_b30_weak": {"weak_bottom_k": 2, "weak_max_breadth": 0.3, "short_style": "weak", "short_max_breadth": 1.0, "max_short_hold_days": 20},
+ "w3_b30_weak": {"weak_bottom_k": 3, "weak_max_breadth": 0.3, "short_style": "weak", "short_max_breadth": 1.0, "max_short_hold_days": 20},
+ "w2_b20_weak": {"weak_bottom_k": 2, "weak_max_breadth": 0.2, "short_style": "weak", "short_max_breadth": 1.0, "max_short_hold_days": 20},
+ "w2_b30_noshort": {"weak_bottom_k": 2, "weak_max_breadth": 0.3, "enable_shorts": false},
+ "w2_b30_rip_l85": {"weak_bottom_k": 2, "weak_max_breadth": 0.3, "short_weak_only": true, "short_max_breadth": 0.3, "max_long_exposure": 0.85},
+ "c90_w2_b30_rip": {"core_weight": 0.9, "max_long_exposure": 0.97, "weak_bottom_k": 2, "weak_max_breadth": 0.3, "short_weak_only": true, "short_max_breadth": 0.3},
+ "c90_w3_b30_weak": {"core_weight": 0.9, "max_long_exposure": 0.97, "weak_bottom_k": 3, "weak_max_breadth": 0.3, "short_style": "weak", "short_max_breadth": 1.0, "max_short_hold_days": 20}
+}

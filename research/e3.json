@@ -1,0 +1,6 @@
+{
+ "c97_notact_cap30": {"core_weight": 0.97, "max_long_exposure": 0.98, "max_gross_exposure": 0.98, "long_entry": 2.0, "max_stock_weight": 0.30, "cap_trim_to": 0.26, "cap_hard_weight": 0.35},
+ "c97_notact_cap35": {"core_weight": 0.97, "max_long_exposure": 0.98, "max_gross_exposure": 0.98, "long_entry": 2.0, "max_stock_weight": 0.35, "cap_trim_to": 0.30, "cap_hard_weight": 0.40},
+ "c97_notact_cap25": {"core_weight": 0.97, "max_long_exposure": 0.98, "max_gross_exposure": 0.98, "long_entry": 2.0, "max_stock_weight": 0.25, "cap_trim_to": 0.22, "cap_hard_weight": 0.30},
+ "c97_tact_nocap": {"core_weight": 0.97, "max_long_exposure": 0.98, "max_gross_exposure": 0.98, "max_stock_weight": 1.0}
+}

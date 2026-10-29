@@ -1,0 +1,8 @@
+{"core30": {"core_weight":0.3},
+ "bh40": {"core_weight":0.4, "core_regime_filter":false, "core_min_score":-1.0},
+ "bh50": {"core_weight":0.5, "core_regime_filter":false, "core_min_score":-1.0},
+ "bh60": {"core_weight":0.6, "core_regime_filter":false, "core_min_score":-1.0},
+ "bh60_bf100": {"core_weight":0.6, "core_regime_filter":false, "core_min_score":-1.0, "breadth_floor":1.0},
+ "bh70_bf100_x95": {"core_weight":0.7, "core_regime_filter":false, "core_min_score":-1.0, "breadth_floor":1.0, "max_long_exposure":0.95, "max_gross_exposure":0.97},
+ "bh80_bf100_x95": {"core_weight":0.8, "core_regime_filter":false, "core_min_score":-1.0, "breadth_floor":1.0, "max_long_exposure":0.95, "max_gross_exposure":0.97}
+}

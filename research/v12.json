@@ -1,0 +1,11 @@
+{
+ "base": {},
+ "c85": {"core_weight": 0.85, "max_long_exposure": 0.97},
+ "c90": {"core_weight": 0.9, "max_long_exposure": 0.97},
+ "c93": {"core_weight": 0.93, "max_long_exposure": 0.97},
+ "c95": {"core_weight": 0.95, "max_long_exposure": 0.97},
+ "c95_notact": {"core_weight": 0.95, "max_long_exposure": 0.97, "long_entry": 2.0, "enable_shorts": false},
+ "c90_rs": {"core_weight": 0.9, "max_long_exposure": 0.97, "w_rs": 0.15},
+ "c90_hedged": {"core_weight": 0.9, "max_long_exposure": 0.97, "weak_bottom_k": 3, "weak_max_breadth": 0.3, "short_weak_only": true, "short_max_breadth": 0.3},
+ "c90_hedged_b20": {"core_weight": 0.9, "max_long_exposure": 0.97, "weak_bottom_k": 2, "weak_max_breadth": 0.2, "short_weak_only": true, "short_max_breadth": 0.2}
+}

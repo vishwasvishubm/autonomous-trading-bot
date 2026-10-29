@@ -1,0 +1,10 @@
+{
+ "base": {},
+ "core90": {"core_weight": 0.9, "max_long_exposure": 0.97},
+ "mr_c80": {"w_regime": 0, "w_trend": 0, "w_momentum": 0, "w_meanrev": 1.0, "er_trend_threshold": 100, "long_entry": 0.5, "long_exit": 0.0, "stop_atr": 6, "trail_atr": 8, "reentry_cooldown_days": 0, "max_long_exposure": 0.97},
+ "mr_c70": {"core_weight": 0.7, "w_regime": 0, "w_trend": 0, "w_momentum": 0, "w_meanrev": 1.0, "er_trend_threshold": 100, "long_entry": 0.5, "long_exit": 0.0, "stop_atr": 6, "trail_atr": 8, "reentry_cooldown_days": 0, "max_long_exposure": 0.97},
+ "mr_c70_e7": {"core_weight": 0.7, "w_regime": 0, "w_trend": 0, "w_momentum": 0, "w_meanrev": 1.0, "er_trend_threshold": 100, "long_entry": 0.7, "long_exit": 0.0, "stop_atr": 6, "trail_atr": 8, "reentry_cooldown_days": 0, "max_long_exposure": 0.97},
+ "mr_c60": {"core_weight": 0.6, "w_regime": 0, "w_trend": 0, "w_momentum": 0, "w_meanrev": 1.0, "er_trend_threshold": 100, "long_entry": 0.5, "long_exit": 0.0, "stop_atr": 6, "trail_atr": 8, "reentry_cooldown_days": 0, "max_long_exposure": 0.97, "max_position_pct": 0.25},
+ "mr_c70_x3": {"core_weight": 0.7, "w_regime": 0, "w_trend": 0, "w_momentum": 0, "w_meanrev": 1.0, "er_trend_threshold": 100, "long_entry": 0.5, "long_exit": -0.3, "stop_atr": 6, "trail_atr": 8, "reentry_cooldown_days": 0, "max_long_exposure": 0.97},
+ "mr_c0": {"core_weight": 0.0, "w_regime": 0, "w_trend": 0, "w_momentum": 0, "w_meanrev": 1.0, "er_trend_threshold": 100, "long_entry": 0.5, "long_exit": 0.0, "stop_atr": 6, "trail_atr": 8, "reentry_cooldown_days": 0, "max_long_exposure": 0.97, "max_position_pct": 0.25, "enable_shorts": false}
+}

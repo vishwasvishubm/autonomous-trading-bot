@@ -1,0 +1,8 @@
+{"guard": {},
+ "core30": {"core_weight":0.3},
+ "core30_bf60": {"core_weight":0.3, "breadth_floor":0.6},
+ "core50_bf60": {"core_weight":0.5, "breadth_floor":0.6},
+ "core70_bf100_x90": {"core_weight":0.7, "breadth_floor":1.0, "max_long_exposure":0.9, "max_gross_exposure":0.95},
+ "core100_pure": {"core_weight":0.95, "breadth_floor":1.0, "max_long_exposure":1.0, "max_gross_exposure":1.0, "long_entry":2.0, "enable_shorts":false, "dd_soft":1, "dd_hard":1, "daily_loss_limit":1},
+ "core50_bf60_ms": {"core_weight":0.5, "breadth_floor":0.6, "core_min_score":-1.0}
+}

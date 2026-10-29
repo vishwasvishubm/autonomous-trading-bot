@@ -1,0 +1,12 @@
+{
+ "c82_l97": {"core_weight": 0.82, "max_long_exposure": 0.97},
+ "c85_l97": {"core_weight": 0.85, "max_long_exposure": 0.97},
+ "c87_l97": {"core_weight": 0.87, "max_long_exposure": 0.97},
+ "c85_l95": {"core_weight": 0.85, "max_long_exposure": 0.95},
+ "c80_l97": {"core_weight": 0.80, "max_long_exposure": 0.97},
+ "c85_l98_g98": {"core_weight": 0.85, "max_long_exposure": 0.98, "max_gross_exposure": 0.98},
+ "c85_l97_pos20": {"core_weight": 0.85, "max_long_exposure": 0.97, "max_position_pct": 0.20},
+ "c85_l97_pos14": {"core_weight": 0.85, "max_long_exposure": 0.97, "max_position_pct": 0.14},
+ "c85_l97_e25": {"core_weight": 0.85, "max_long_exposure": 0.97, "long_entry": 0.25},
+ "c85_l97_e35": {"core_weight": 0.85, "max_long_exposure": 0.97, "long_entry": 0.35}
+}

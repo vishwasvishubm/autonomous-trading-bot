@@ -1,0 +1,8 @@
+{"bh70": {"core_weight":0.7, "core_regime_filter":false, "core_min_score":-1.0, "breadth_floor":1.0, "max_long_exposure":0.95, "max_gross_exposure":0.97},
+ "bh80": {"core_weight":0.8, "core_regime_filter":false, "core_min_score":-1.0, "breadth_floor":1.0, "max_long_exposure":0.95, "max_gross_exposure":0.97},
+ "bh80_cut50": {"core_weight":0.8, "core_regime_filter":false, "core_min_score":-1.0, "breadth_floor":1.0, "max_long_exposure":0.95, "max_gross_exposure":0.97, "dd_core_cut":0.5},
+ "bh80_bf50": {"core_weight":0.8, "core_regime_filter":false, "core_min_score":-1.0, "breadth_floor":0.5, "max_long_exposure":0.95, "max_gross_exposure":0.97},
+ "bh80_rs15": {"core_weight":0.8, "core_regime_filter":false, "core_min_score":-1.0, "breadth_floor":1.0, "max_long_exposure":0.95, "max_gross_exposure":0.97, "w_rs":0.15},
+ "bh90": {"core_weight":0.9, "core_regime_filter":false, "core_min_score":-1.0, "breadth_floor":1.0, "max_long_exposure":0.97, "max_gross_exposure":0.98},
+ "bh80_filt": {"core_weight":0.8, "core_regime_filter":true, "breadth_floor":1.0, "max_long_exposure":0.95, "max_gross_exposure":0.97}
+}

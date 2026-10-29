@@ -1,0 +1,6 @@
+{"tactical_only": {"core_weight":0.0, "breadth_floor":0.25, "max_long_exposure":0.8, "max_gross_exposure":0.9},
+ "core50": {"core_weight":0.5},
+ "core70": {"core_weight":0.7},
+ "core80": {},
+ "core90": {"core_weight":0.9, "max_long_exposure":0.97, "max_gross_exposure":0.98}
+}

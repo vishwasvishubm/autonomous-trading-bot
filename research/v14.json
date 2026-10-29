@@ -1,0 +1,9 @@
+{
+ "c85": {"core_weight": 0.85, "max_long_exposure": 0.97},
+ "c85_h1": {"core_weight": 0.85, "max_long_exposure": 0.97, "weak_bottom_k": 1, "weak_max_breadth": 0.3, "short_weak_only": true, "short_max_breadth": 0.3},
+ "c85_h2": {"core_weight": 0.85, "max_long_exposure": 0.97, "weak_bottom_k": 2, "weak_max_breadth": 0.3, "short_weak_only": true, "short_max_breadth": 0.3},
+ "c85_h3": {"core_weight": 0.85, "max_long_exposure": 0.97, "weak_bottom_k": 3, "weak_max_breadth": 0.3, "short_weak_only": true, "short_max_breadth": 0.3},
+ "c85_h2_s10": {"core_weight": 0.85, "max_long_exposure": 0.97, "weak_bottom_k": 2, "weak_max_breadth": 0.3, "short_weak_only": true, "short_max_breadth": 0.3, "max_short_pct": 0.10},
+ "c85_h2_rsi55": {"core_weight": 0.85, "max_long_exposure": 0.97, "weak_bottom_k": 2, "weak_max_breadth": 0.3, "short_weak_only": true, "short_max_breadth": 0.3, "rip_min_rsi": 55, "rip_min_z": 0.0},
+ "c85_h3_l90": {"core_weight": 0.85, "max_long_exposure": 0.90, "weak_bottom_k": 3, "weak_max_breadth": 0.3, "short_weak_only": true, "short_max_breadth": 0.3}
+}

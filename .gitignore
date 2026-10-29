@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+logs/
+data/stream/
+__pycache__/
+*.tmp
+dist/
+*.zip
+STOP
+FLATTEN

@@ -1,0 +1,8 @@
+{"guard": {},
+ "core30": {"core_weight":0.3},
+ "core45": {"core_weight":0.45},
+ "core60": {"core_weight":0.6},
+ "core45_rs15": {"core_weight":0.45, "w_rs":0.15},
+ "core45_noshort": {"core_weight":0.45, "enable_shorts":false},
+ "core60_expo90": {"core_weight":0.6, "max_long_exposure":0.9, "max_gross_exposure":0.95}
+}

@@ -1,0 +1,9 @@
+{
+ "c85_cap30": {"max_stock_weight": 0.30, "cap_trim_to": 0.26, "cap_hard_weight": 0.35},
+ "c90_cap30": {"core_weight": 0.90, "max_stock_weight": 0.30, "cap_trim_to": 0.26, "cap_hard_weight": 0.35},
+ "c95_cap30_notact": {"core_weight": 0.95, "max_long_exposure": 0.97, "long_entry": 2.0, "max_stock_weight": 0.30, "cap_trim_to": 0.26, "cap_hard_weight": 0.35},
+ "c85_cap30_trail4": {"max_stock_weight": 0.30, "cap_trim_to": 0.26, "cap_hard_weight": 0.35, "trail_atr": 4.0},
+ "c85_cap30_e35": {"max_stock_weight": 0.30, "cap_trim_to": 0.26, "cap_hard_weight": 0.35, "long_entry": 0.35},
+ "c85_cap35": {"max_stock_weight": 0.35, "cap_trim_to": 0.30, "cap_hard_weight": 0.40},
+ "c97_nocap_notact": {"core_weight": 0.97, "max_long_exposure": 0.98, "max_gross_exposure": 0.98, "long_entry": 2.0, "max_stock_weight": 1.0}
+}

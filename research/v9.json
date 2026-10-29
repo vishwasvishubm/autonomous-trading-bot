@@ -1,0 +1,12 @@
+{
+ "base": {},
+ "core90": {"core_weight": 0.9, "max_long_exposure": 0.97},
+ "weak2_noshort": {"weak_bottom_k": 2, "enable_shorts": false},
+ "weak3_noshort": {"weak_bottom_k": 3, "enable_shorts": false},
+ "weak2_wshort": {"weak_bottom_k": 2, "short_style": "weak", "short_max_breadth": 1.0, "max_long_exposure": 0.85, "max_short_hold_days": 20},
+ "weak3_wshort": {"weak_bottom_k": 3, "short_style": "weak", "short_max_breadth": 1.0, "max_long_exposure": 0.85, "max_short_hold_days": 20},
+ "weak2_rip": {"weak_bottom_k": 2, "short_weak_only": true, "short_max_breadth": 1.0, "max_long_exposure": 0.85},
+ "weak3_rip": {"weak_bottom_k": 3, "short_weak_only": true, "short_max_breadth": 1.0, "max_long_exposure": 0.85},
+ "weak2_wshort_l90": {"weak_bottom_k": 2, "short_style": "weak", "short_max_breadth": 1.0, "max_long_exposure": 0.90, "max_short_hold_days": 20},
+ "weak2_wshort_c90": {"weak_bottom_k": 2, "short_style": "weak", "short_max_breadth": 1.0, "core_weight": 0.85, "max_long_exposure": 0.88, "max_short_hold_days": 20}
+}

@@ -1,0 +1,6 @@
+{"bh80": {"core_weight":0.8, "core_regime_filter":false, "core_min_score":-1.0, "breadth_floor":1.0, "max_long_exposure":0.95, "max_gross_exposure":0.97},
+ "bh80_noguard": {"core_weight":0.8, "core_regime_filter":false, "core_min_score":-1.0, "breadth_floor":1.0, "max_long_exposure":0.95, "max_gross_exposure":0.97, "dd_soft":1, "dd_hard":1, "daily_loss_limit":1},
+ "bh80_soft12": {"core_weight":0.8, "core_regime_filter":false, "core_min_score":-1.0, "breadth_floor":1.0, "max_long_exposure":0.95, "max_gross_exposure":0.97, "dd_soft":0.12, "dd_hard":0.2},
+ "bh80_le35": {"core_weight":0.8, "core_regime_filter":false, "core_min_score":-1.0, "breadth_floor":1.0, "max_long_exposure":0.95, "max_gross_exposure":0.97, "long_entry":0.35},
+ "bh75": {"core_weight":0.75, "core_regime_filter":false, "core_min_score":-1.0, "breadth_floor":1.0, "max_long_exposure":0.95, "max_gross_exposure":0.97}
+}
