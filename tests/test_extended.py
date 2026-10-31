@@ -64,7 +64,7 @@ def bars(n=200, start=100.0, drift=0.001, vol=1_000_000, seed=1):
 
 def sig(t, score=0.5, close=100.0, regime=0.5, **f):
     feats = {"close": close, "atr": 2.0, "atr_pct": 0.02, "ema_trend": 95.0, "ema_fast": 101.0, "ema_slow": 99.0,
-             "bb_z": 0.0, "rsi": 55.0, "er": 0.4, "mom_long": 0.0, **f}
+             "bb_z": 0.0, "rsi": 55.0, "er": 0.4, "mom_long": 0.0, "vol_flow": 0.1, **f}
     return Signal(t, score, {"regime": regime}, feats, ["test"])
 
 
@@ -594,6 +594,9 @@ class RecoveryTests(unittest.TestCase):
                 time.sleep(0.01)
                 return {}
 
+            def assignment(self):
+                return {"tp"}
+
             def close(self):
                 pass
 
@@ -614,6 +617,53 @@ class RecoveryTests(unittest.TestCase):
             self.assertTrue(feed.is_connected)
             feed.close()
         finally:
+            for k, v in saved.items():
+                if v is None:
+                    sys.modules.pop(k, None)
+                else:
+                    sys.modules[k] = v
+
+    def test_consumer_without_partitions_rejoins(self):
+        made = []
+
+        class Consumer:
+            def __init__(self, *topics, **kw):
+                made.append(self)
+                self.n = len(made)
+                self.sent = False
+
+            def poll(self, timeout_ms=0):
+                time.sleep(0.01)
+                if self.n >= 2 and not self.sent:
+                    self.sent = True
+                    return {"tp": [types.SimpleNamespace(topic="market.ticks", value={"event_type": "price_tick"})]}
+                return {}
+
+            def assignment(self):
+                return set() if self.n == 1 else {"tp"}      # the first join got no partitions
+
+            def close(self):
+                pass
+
+        kafka = types.ModuleType("kafka")
+        kafka.KafkaConsumer = Consumer
+        errors = types.ModuleType("kafka.errors")
+        errors.KafkaError = FakeKafkaError
+        saved = {k: sys.modules.get(k) for k in ("kafka", "kafka.errors")}
+        sys.modules["kafka"], sys.modules["kafka.errors"] = kafka, errors
+        import trader.stream as stream
+        old = stream.NO_PARTITIONS_S
+        stream.NO_PARTITIONS_S = 0.1
+        try:
+            q: queue.Queue = queue.Queue()
+            feed = stream.KafkaFeed(Config(), q, consumers=1)
+            feed.start()
+            topic, _, _ = q.get(timeout=5)                           # arrives after the rejoin
+            self.assertEqual(topic, "market.ticks")
+            self.assertGreaterEqual(len(made), 2)
+            feed.close()
+        finally:
+            stream.NO_PARTITIONS_S = old
             for k, v in saved.items():
                 if v is None:
                     sys.modules.pop(k, None)
@@ -688,6 +738,9 @@ class RecoveryTests(unittest.TestCase):
     @unittest.skipUnless(HIST.exists(), "needs data/history")
     def test_service_restart_resumes_from_server_state(self):
         hist = {f.stem: json.loads(f.read_text()) for f in sorted(HIST.glob("*.json"))}
+        # data/history can hold several datasets (each live run adds its tickers): use the latest one
+        latest = max(v[-1]["date"] for v in hist.values())
+        hist = {t: v for t, v in hist.items() if v[-1]["date"] == latest}
         dates = sorted({b["date"] for v in hist.values() for b in v[-120:]})
         by = {t: {b["date"]: b for b in v} for t, v in hist.items()}
         with tempfile.TemporaryDirectory() as tmp:
@@ -967,6 +1020,151 @@ class ConcentrationCapTests(unittest.TestCase):
         self.assertFalse([i for i in plan(led, sigs, "2025-06-02", 300, p) if i.ticker == "W" and i.action == "SELL"])
 
 
+class ProfitTakingTests(unittest.TestCase):
+    """Scale-out, long-term-only exits, trend + cap, tax-free gain harvest, profit-take exits."""
+
+    def _book(self, qty, entry, close=200.0, **f):
+        led = Ledger(cash=100_000)
+        led.positions["W"] = Position("W", qty, 50.0, entry, 1, close, stop=10.0)
+        sigs = {f"T{i}": sig(f"T{i}", 0.0) for i in range(9)}
+        sigs["W"] = sig("W", 0.2, close=close, **f)
+        for i in range(9):
+            led.positions[f"T{i}"] = Position(f"T{i}", 800, 100.0, entry, 1, 100.0, stop=60.0)
+        return led, sigs
+
+    def _w(self, led, sigs, d, p, day=300, **kw):
+        return [i for i in plan(led, sigs, d, day, p, **kw) if i.ticker == "W"]
+
+    def _sells(self, *a, **kw):
+        return [i for i in self._w(*a, **kw) if i.action == "SELL"]
+
+    def test_scale_out_sells_a_fraction_once_per_milestone_and_never_rebuys(self):
+        p = replace(StrategyParams(), so_levels="0.5,1.0", so_fraction=0.25)
+        led, sigs = self._book(1000, "2024-01-02")             # +300%: both milestones passed
+        out = self._w(led, sigs, "2025-06-02", p)
+        self.assertEqual((out[0].action, out[0].qty), ("SELL", 250))
+        self.assertIn("scale-out", out[0].reason)
+        self.assertEqual(led.positions["W"].scaled, 2)
+        led.positions["W"].qty = 750
+        led.cash = 400_000
+        self.assertFalse(self._w(led, sigs, "2025-06-03", p))  # no second sale, no core re-buy
+
+    def test_long_term_only_waits_for_365_days(self):
+        p = replace(StrategyParams(), so_levels="0.5", pt_long_term_only=True)
+        led, sigs = self._book(1000, "2025-03-01")
+        self.assertFalse([i for i in self._w(led, sigs, "2025-06-02", p) if i.action == "SELL"])
+        led, sigs = self._book(1000, "2024-03-01")
+        self.assertEqual(self._w(led, sigs, "2025-06-02", p)[0].action, "SELL")
+
+    def test_trend_cap_trims_a_big_holding_only_when_its_trend_broke(self):
+        p = replace(StrategyParams(), cap_trend_weight=0.20, cap_trend_trim_to=0.15)
+        led, sigs = self._book(1100, "2024-01-02", ema_fast=180.0, ema_slow=190.0)   # 22% of wealth
+        out = self._w(led, sigs, "2025-06-02", p)
+        self.assertEqual(out[0].action, "SELL")
+        self.assertIn("trend + cap", out[0].reason)
+        wealth = led.wealth({t: s.feats["close"] for t, s in sigs.items()})
+        self.assertAlmostEqual((1100 - out[0].qty) * 200.0 / wealth, 0.15, delta=0.002)
+        led, sigs = self._book(1100, "2024-01-02")                                    # trend intact
+        self.assertFalse([i for i in self._w(led, sigs, "2025-06-02", p) if i.action == "SELL"])
+
+    def test_gain_harvest_books_gains_inside_the_exemption_and_rebuys(self):
+        from trader.planner import HARVEST_REBUY
+        p = replace(StrategyParams(), gain_harvest=True)
+        led, sigs = self._book(1000, "2024-01-02")             # 1.5 L long-term gain, Rs 1 L exempt
+        out = self._w(led, sigs, "2025-03-20", p)
+        sell = next(i for i in out if i.action == "SELL")
+        buy = next(i for i in out if i.action == "BUY")
+        self.assertEqual(sell.qty, buy.qty)
+        self.assertEqual(buy.priority, HARVEST_REBUY)
+        self.assertLessEqual(sell.qty * 150.0, 95_000)
+        self.assertGreater(sell.qty * 150.0, 90_000)
+        self.assertIn("tax-free gain harvest", sell.reason)
+        self.assertFalse([i for i in self._w(led, sigs, "2025-06-20", p) if i.action == "SELL"])   # not March
+        self.assertTrue(self._w(led, sigs, "2025-06-20", replace(p, gh_final_days=5), days_remaining=3))
+        self.assertFalse(self._sells(led, sigs, "2025-03-20", replace(p, gh_max_weight=0.10)))  # too big
+
+    def test_gain_harvest_skips_short_term_and_used_exemption(self):
+        p = replace(StrategyParams(), gain_harvest=True)
+        led, sigs = self._book(1000, "2024-06-02")             # < 365 days on 2025-03-20
+        self.assertFalse(self._sells(led, sigs, "2025-03-20", p))
+        led, sigs = self._book(1000, "2024-01-02")
+        led.gains[2024] = FyGains(0.0, 100_000.0)              # FY 2024-25 exemption already used
+        self.assertFalse(self._sells(led, sigs, "2025-03-20", p))
+
+    def test_profit_take_exit_leaves_the_core_until_the_trend_resumes(self):
+        p = replace(StrategyParams(), pt_min_gain=0.2, pt_trend_break=True, pt_cooldown=5)
+        led, sigs = self._book(1000, "2024-01-02", ema_fast=180.0, ema_slow=190.0)
+        out = self._w(led, sigs, "2025-06-02", p)
+        self.assertEqual((out[0].action, out[0].qty), ("SELL", 1000))
+        self.assertIn("profit-take", out[0].reason)
+        del led.positions["W"]
+        led.cash = 300_000
+        self.assertFalse(self._w(led, sigs, "2025-06-05", p, day=302))                # cooldown
+        self.assertFalse(self._w(led, sigs, "2025-06-20", p, day=310))                # trend still down
+        sigs["W"] = sig("W", 0.2, close=200.0, ema_fast=195.0, ema_slow=190.0)
+        self.assertEqual(self._w(led, sigs, "2025-06-20", p, day=310)[0].action, "BUY")   # back in the core
+
+    def test_exits_off_by_default_and_gain_harvest_on(self):
+        led, sigs = self._book(1000, "2024-01-02", ema_fast=180.0, ema_slow=190.0)
+        self.assertFalse(self._sells(led, sigs, "2025-06-20", StrategyParams()))   # no exit outside the windows
+        led, sigs = self._book(400, "2024-01-02")                                   # 8% of wealth: harvestable
+        out = self._sells(led, sigs, "2025-03-20", StrategyParams())
+        self.assertIn("tax-free gain harvest", out[0].reason)
+
+
+class VolumeStrategyTests(unittest.TestCase):
+    @staticmethod
+    def _bars(n, up_vol, down_vol):
+        out, px = [], 100.0
+        for i in range(n):
+            up = i % 2 == 0
+            px *= 1.01 if up else 0.995
+            out.append({"date": f"d{i:04d}", "open": px, "high": px, "low": px, "close": px,
+                        "volume": up_vol if up else down_vol})
+        return out
+
+    def test_volume_flow_measures_accumulation_and_distribution(self):
+        from trader.indicators import features
+        p = StrategyParams()
+        acc = features(self._bars(200, 3000, 1000), p)
+        dist = features(self._bars(200, 1000, 3000), p)
+        self.assertAlmostEqual(acc["vol_flow"], 0.5, delta=0.05)
+        self.assertAlmostEqual(dist["vol_flow"], -0.5, delta=0.05)
+        self.assertIn("ret1", acc)
+
+    def test_volume_weighting_gives_accumulation_more_of_the_core(self):
+        from trader.planner import _core_shares
+        p = replace(StrategyParams(), core_weighting="volume", volume_tilt=0.5)
+        sigs = {"A": sig("A", vol_flow=0.6), "B": sig("B", vol_flow=0.0), "C": sig("C", vol_flow=-0.6)}
+        sh = _core_shares(sigs, p)
+        self.assertAlmostEqual(sum(sh.values()), 1.0)
+        self.assertGreater(sh["A"], sh["B"])
+        self.assertGreater(sh["B"], sh["C"])
+        self.assertAlmostEqual(sh["A"] / sh["C"], 1.3 / 0.7, places=6)
+
+    def test_smart_entry_waits_for_buyers_then_opens_after_the_limit(self):
+        p = replace(StrategyParams(), core_entry="volume", core_entry_wait=20)
+        sigs = {"A": sig("A", vol_flow=0.3), "B": sig("B", vol_flow=-0.3)}
+        led = Ledger(cash=1_000_000)
+        bought = {i.ticker for i in plan(led, sigs, "2025-06-02", 100, p) if i.action == "BUY"}
+        self.assertEqual(bought, {"A"})                       # B: sellers in control, wait
+        bought = {i.ticker for i in plan(led, sigs, "2025-07-02", 120, p) if i.action == "BUY"}
+        self.assertIn("B", bought)                            # 20 days later: buy anyway
+
+    def test_distribution_exit_sells_on_heavy_volume_down_day(self):
+        p = replace(StrategyParams(), vd_volume_ratio=2.0, vd_drop=0.03)
+        led = Ledger(cash=100_000)
+        led.positions["W"] = Position("W", 100, 100.0, "2025-01-02", 1, 120.0, stop=10.0)
+        sigs = {"W": sig("W", close=95.0, ret1=-0.05, vol_ratio=3.0, vol_flow=-0.2, ema_fast=100.0)}
+        out = [i for i in plan(led, sigs, "2025-06-02", 300, p) if i.action == "SELL"]
+        self.assertEqual(out[0].qty, 100)
+        self.assertIn("volume distribution", out[0].reason)
+        self.assertIn("W", led.pt_out)
+        sigs["W"] = sig("W", close=95.0, ret1=-0.05, vol_ratio=1.2, vol_flow=-0.2, ema_fast=100.0)   # normal volume
+        led.pt_out.clear()
+        self.assertFalse([i for i in plan(led, sigs, "2025-06-02", 300, p) if i.action == "SELL"])
+
+
 class DataAndReplayTests(unittest.TestCase):
     @staticmethod
     def _ticks(path, days, price, start=0):
@@ -1055,6 +1253,7 @@ class PreflightSwitchTests(unittest.TestCase):
         stage = self.Stage()
         cfg = make_cfg(tmp)
         cfg.news_quiet_ms = 0
+        cfg.params = replace(cfg.params, core_entry="")     # whole core on the traded day (no entry gate)
         eng = Engine(cfg, api, stage, HeartbeatWorker(api))
         eng.bootstrap()
         return eng, api, stage

@@ -83,13 +83,23 @@ def _exit(t: str, pos, action: str, prio: int, reason: str, sig: Signal, check: 
                                      "unrealized": round((sig.feats["close"] - pos.avg_price) * pos.qty, 2)}})
 
 
-def _core_shares(signals: dict[str, Signal], p: StrategyParams) -> dict[str, float]:
-    """Each core stock's share of the core (sums to 1). Weak stocks get none."""
-    core = [s for s in signals.values() if not s.weak] or list(signals.values())
+def _core_shares(signals: dict[str, Signal], p: StrategyParams,
+                 exclude: dict | set = (), held: set = frozenset()) -> dict[str, float]:
+    """Each core stock's share of the core (sums to 1). Weak stocks and `exclude`
+    (stocks out after a profit-take) get none."""
+    core = ([s for s in signals.values() if not s.weak and s.ticker not in exclude]
+            or [s for s in signals.values() if s.ticker not in exclude] or list(signals.values()))
     if p.core_weighting == "inverse_vol":
         raw = {s.ticker: max(s.feats.get("vol_long", 0.0), 1e-4) ** -p.inv_vol_power for s in core}
+    elif p.core_weighting == "volume":
+        raw = {s.ticker: max(0.2, 1.0 + p.volume_tilt * s.feats.get("vol_flow", 0.0)) for s in core}
     else:
         raw = {s.ticker: 1.0 for s in core}
+    if p.core_max_stocks and len(raw) > p.core_max_stocks:
+        def rank(t):
+            f = signals[t].feats
+            return (raw[t] + (0.5 if t in held else 0.0), f.get("vol_flow", 0.0), f.get("mom_long", 0.0))
+        raw = {t: raw[t] for t in sorted(raw, key=rank, reverse=True)[:p.core_max_stocks]}
     total = sum(raw.values()) or 1.0
     return {t: v / total for t, v in raw.items()}
 
@@ -122,15 +132,19 @@ def _concentration_trim(ledger: Ledger, t: str, pos, sig: Signal, wealth: float,
     the 15% STCG."""
     c = sig.feats["close"]
     weight = pos.qty * c / wealth if wealth > 0 else 0.0
-    if weight <= p.max_stock_weight:
+    # trend + cap: a big holding whose trend broke is trimmed earlier (cap_trend_weight)
+    trend = (p.cap_trend_weight > 0 and weight > p.cap_trend_weight
+             and sig.feats["ema_fast"] < sig.feats["ema_slow"])
+    if weight <= p.max_stock_weight and not trend:
         return None
+    trim_to = p.cap_trim_to if weight > p.max_stock_weight else p.cap_trend_trim_to
     # conservative: long-term only if even the latest purchase is > 365 days old. The platform
     # books P&L at average cost (verified against the SimTest order log); how it dates a partial
     # sale of shares bought on several days could not be verified, so never assume the best case
     long_term = days_held(pos.last_buy_date or pos.entry_date, d) > LTCG_DAYS
     if not long_term and weight < p.cap_hard_weight:
         return None
-    qty = pos.qty - int(p.cap_trim_to * wealth // c)
+    qty = pos.qty - int(trim_to * wealth // c)
     if qty < 1 or qty * c < p.min_order_value:
         return None
     gain = (c - pos.avg_price) * qty
@@ -142,13 +156,92 @@ def _concentration_trim(ledger: Ledger, t: str, pos, sig: Signal, wealth: float,
     else:
         tax = STCG_RATE * max(0.0, gain)
         basis = f"short-term (above the hard cap {p.cap_hard_weight:.0%})"
-    it = _exit(t, pos, "SELL", 1, f"concentration cap: {weight:.0%} of wealth > {p.max_stock_weight:.0%}, "
-                                  f"trim to {p.cap_trim_to:.0%} (gain {gain:,.0f}, {basis}, est. tax {tax:,.0f})",
+    why = (f"concentration cap: {weight:.0%} of wealth > {p.max_stock_weight:.0%}" if weight > p.max_stock_weight
+           else f"trend + cap: {weight:.0%} of wealth > {p.cap_trend_weight:.0%} and its trend broke (20-EMA < 60-EMA)")
+    it = _exit(t, pos, "SELL", 1, f"{why}, trim to {trim_to:.0%} (gain {gain:,.0f}, {basis}, est. tax {tax:,.0f})",
                sig, "concentration")
     it.qty = qty
-    it.explain.update({"weight": round(weight, 4), "trim_to": p.cap_trim_to, "gain": round(gain, 2),
+    it.explain.update({"weight": round(weight, 4), "trim_to": trim_to, "gain": round(gain, 2),
                        "long_term": long_term, "ltcg_exempt_left": round(exempt_left, 2), "est_tax": round(tax, 2)})
     return it
+
+
+def _profit_take(t: str, pos, sig: Signal, d: str, p: StrategyParams) -> OrderIntent | None:
+    """Sell a winner in full at the point its run looks over (see StrategyParams.pt_*)."""
+    c, f = sig.feats["close"], sig.feats
+    gain_pct = c / pos.avg_price - 1 if pos.avg_price > 0 else 0.0
+    if gain_pct < p.pt_min_gain:
+        return None
+    long_term = days_held(pos.last_buy_date or pos.entry_date, d) > LTCG_DAYS
+    if p.pt_long_term_only and not long_term:
+        return None
+    if p.pt_trail > 0 and pos.peak > 0 and c <= pos.peak * (1 - p.pt_trail):
+        why = f"fell {1 - c / pos.peak:.0%} from its best close {pos.peak:.2f}"
+    elif p.pt_trend_break and f["ema_fast"] < f["ema_slow"]:
+        why = "trend broke (20-EMA below 60-EMA)"
+    elif p.pt_rsi > 0 and f["rsi"] >= p.pt_rsi:
+        why = f"overbought (RSI {f['rsi']:.0f} >= {p.pt_rsi:.0f})"
+    else:
+        return None
+    gain = (c - pos.avg_price) * pos.qty
+    it = _exit(t, pos, "SELL", 1, f"profit-take: +{gain_pct:.0%} ({gain:,.0f}, "
+                                  f"{'long' if long_term else 'short'}-term), {why}", sig, "profit_take")
+    it.explain.update({"gain_pct": round(gain_pct, 4), "gain": round(gain, 2), "long_term": long_term})
+    return it
+
+
+def _entry_ok(sig: Signal, p: StrategyParams, waited: int) -> bool:
+    """Smart core entry gate (StrategyParams.core_entry): is today a good day to buy?"""
+    if not p.core_entry or (p.core_entry_wait and waited >= p.core_entry_wait):
+        return True
+    f = sig.feats
+    if p.core_entry == "trend":
+        return f["close"] > f["ema_fast"] > f["ema_slow"]
+    if p.core_entry == "volume":
+        return f.get("vol_flow", 0.0) > 0
+    if p.core_entry == "dip":
+        return f["rsi"] < 50 and f["close"] > f["ema_trend"]
+    return True
+
+
+def _volume_exit(t: str, pos, sig: Signal, d: str, p: StrategyParams) -> OrderIntent | None:
+    """Sell a long on a heavy-volume down day inside a distribution phase (see vd_*)."""
+    f = sig.feats
+    if not (f.get("ret1", 0.0) <= -p.vd_drop and f.get("vol_ratio", 1.0) >= p.vd_volume_ratio
+            and f.get("vol_flow", 0.0) < 0 and f["close"] < f["ema_fast"]):
+        return None
+    gain = (f["close"] - pos.avg_price) * pos.qty
+    long_term = days_held(pos.last_buy_date or pos.entry_date, d) > LTCG_DAYS
+    it = _exit(t, pos, "SELL", 1, f"volume distribution: {f['ret1']:+.1%} on {f['vol_ratio']:.1f}x average volume, "
+                                  f"volume flow {f['vol_flow']:+.2f}, below the 20-EMA "
+                                  f"({gain:+,.0f}, {'long' if long_term else 'short'}-term)", sig, "volume")
+    it.explain.update({"vol_ratio": round(f["vol_ratio"], 2), "vol_flow": round(f["vol_flow"], 3),
+                       "ret1": round(f["ret1"], 4), "gain": round(gain, 2), "long_term": long_term})
+    return it
+
+
+def _scale_out(t: str, pos, sig: Signal, d: str, p: StrategyParams) -> tuple[OrderIntent, int] | None:
+    """Sell so_fraction of a winner each time it passes a new gain milestone (so_levels)."""
+    levels = sorted(float(x) for x in p.so_levels.split(",") if x.strip())
+    c = sig.feats["close"]
+    gain_pct = c / pos.avg_price - 1 if pos.avg_price > 0 else 0.0
+    hit = sum(1 for lv in levels if gain_pct >= lv)
+    if hit <= pos.scaled:
+        return None
+    long_term = days_held(pos.last_buy_date or pos.entry_date, d) > LTCG_DAYS
+    if p.pt_long_term_only and not long_term:
+        return None
+    qty = int(pos.qty * p.so_fraction)
+    if qty < 1 or qty * c < p.min_order_value:
+        return None
+    gain = (c - pos.avg_price) * qty
+    it = _exit(t, pos, "SELL", 1, f"scale-out: +{gain_pct:.0%} passed the +{levels[hit - 1]:.0%} milestone, "
+                                  f"sell {p.so_fraction:.0%} ({gain:,.0f} gain, {'long' if long_term else 'short'}-term), "
+                                  f"keep the rest", sig, "scale_out")
+    it.qty = qty
+    it.explain.update({"gain_pct": round(gain_pct, 4), "gain": round(gain, 2), "milestone": levels[hit - 1],
+                       "long_term": long_term})
+    return it, hit
 
 
 def plan(ledger: Ledger, signals: dict[str, Signal], d: str, day: int, p: StrategyParams,
@@ -157,14 +250,26 @@ def plan(ledger: Ledger, signals: dict[str, Signal], d: str, day: int, p: Strate
     """`risk` comes from RiskGuard.update(); `eligible` = tickers that passed the
     universe screen (None = all). Ineligible tickers can still be exited, never entered."""
     risk = risk or RiskState()
+    if ledger.start_day < 0:
+        ledger.start_day = day
     prices = {t: s.feats["close"] for t, s in signals.items()}
     wealth = ledger.wealth(prices)
     intents: list[OrderIntent] = []
     closing: set[str] = set()
     n_universe = len(signals)
     # the passive core is spread over the stocks that are not weak (weak ones are short candidates)
-    n_core = sum(1 for s in signals.values() if not s.weak) or n_universe
-    shares = _core_shares(signals, p)
+    # a stock sold by a profit-take rejoins the core after the cooldown, once its uptrend resumed
+    for t in list(ledger.pt_out):
+        s = signals.get(t)
+        if s and day - ledger.pt_out[t] >= p.pt_cooldown and (
+                not p.pt_reentry_trend or s.feats["close"] > s.feats["ema_fast"] > s.feats["ema_slow"]) and (
+                not p.vd_reentry_volume or s.feats.get("vol_flow", 0.0) > 0):
+            del ledger.pt_out[t]
+    held = {t for t, pos in ledger.positions.items() if pos.qty > 0}
+    # only stocks that passed the universe screen (or are held) compete for the core
+    pool = {t: s for t, s in signals.items() if eligible is None or t in eligible or t in held}
+    shares = _core_shares(pool, p, ledger.pt_out, held)
+    n_core = len(shares) or n_universe
     core_n = {t: 1.0 / v for t, v in shares.items()}         # per stock, for _core_qty
 
     # ---- 0/1: exits ----------------------------------------------------------
@@ -194,6 +299,27 @@ def plan(ledger: Ledger, signals: dict[str, Signal], d: str, day: int, p: Strate
                 if it:
                     intents.append(it)
                     closing.add(t)
+                    continue
+            if p.vd_volume_ratio > 0 and held_days >= p.min_hold_days:
+                it = _volume_exit(t, pos, sig, d, p)
+                if it:
+                    intents.append(it)
+                    closing.add(t)
+                    ledger.pt_out[t] = day
+                    continue
+            if p.so_levels and held_days >= p.min_hold_days:
+                r = _scale_out(t, pos, sig, d, p)
+                if r:
+                    intents.append(r[0])
+                    closing.add(t)
+                    pos.scaled = r[1]
+                    continue
+            if p.pt_min_gain > 0 and held_days >= p.min_hold_days:
+                it = _profit_take(t, pos, sig, d, p)
+                if it:
+                    intents.append(it)
+                    closing.add(t)
+                    ledger.pt_out[t] = day
                     continue
             if pos.stop and c <= pos.stop:
                 if p.reentry_cooldown_days:
@@ -294,6 +420,36 @@ def plan(ledger: Ledger, signals: dict[str, Signal], d: str, day: int, p: Strate
                 closing.add(t)
                 taxable -= loss
 
+    # ---- 2b: tax-free gain harvest ------------------------------------------------
+    # Sec 112A: the first Rs 1 L of LTCG per FY is exempt, and an unused exemption is lost.
+    # Sell long-term winners and buy them straight back, realizing gains up to what is
+    # left of it: the profit is booked at no tax and the position is unchanged.
+    final = p.gh_final_days > 0 and days_remaining is not None and days_remaining <= p.gh_final_days
+    if p.gain_harvest and not risk.flatten and (
+            (p.gh_march and dt.month == 3 and dt.day >= p.harvest_from_day) or final):
+        row = ledger.tax_schedule().get(fiscal_year(d))
+        left = 0.95 * (row["ltcg_exempt_left"] if row else LTCG_EXEMPTION)   # 5% margin for price moves
+        winners = sorted(((prices[t] - pos.avg_price) * pos.qty, t) for t, pos in ledger.positions.items()
+                         if t not in closing and pos.qty > 0 and t in prices and prices[t] > pos.avg_price
+                         and days_held(pos.last_buy_date or pos.entry_date, d) > LTCG_DAYS
+                         and (final or pos.qty * prices[t] <= p.gh_max_weight * wealth))
+        for _, t in sorted(winners, reverse=True):
+            pos, c = ledger.positions[t], prices[t]
+            qty = min(pos.qty, int(left // (c - pos.avg_price)))
+            gain = (c - pos.avg_price) * qty
+            if qty < 1 or gain < p.gh_min_gain:
+                continue
+            info = {"type": "gain_harvest", "gain": round(gain, 2), "ltcg_exempt_left": round(left / 0.95, 2),
+                    "fees": round(2 * BROKERAGE_FEE + DP_CHARGE, 2)}
+            intents.append(OrderIntent(t, "SELL", qty, 2, f"tax-free gain harvest: book +{gain:,.0f} long-term gain "
+                                                          f"inside the Rs 1 L LTCG exemption (tax 0)", info))
+            intents.append(OrderIntent(t, "BUY", qty, HARVEST_REBUY,
+                                       "tax-free gain harvest re-buy: keep the position, gain is booked", info))
+            if qty == pos.qty:
+                ledger.harvest_carry[t] = (pos.stop, pos.peak)
+            closing.add(t)
+            left -= gain
+
     # ---- 3: entries ----------------------------------------------------------
     winding_down = days_remaining is not None and days_remaining <= p.wind_down_days
     if not winding_down and risk.allow_entries:
@@ -308,6 +464,9 @@ def plan(ledger: Ledger, signals: dict[str, Signal], d: str, day: int, p: Strate
         breadth = (sum(1 for s in signals.values() if s.feats["close"] > s.feats["ema_trend"])
                    / len(signals)) if signals else 1.0
         long_cap = p.max_long_exposure * (p.breadth_floor + (1.0 - p.breadth_floor) * breadth)
+        # idle cash (e.g. after a profit-take) goes back into the core without waiting for the band
+        band = (0.0 if p.deploy_idle_cash > 0 and wealth > 0 and (ledger.cash - reserve) / wealth >= p.deploy_idle_cash
+                else p.rebalance_band)
 
         ranked = sorted(signals.values(), key=lambda s: -abs(s.score))
         for sig in ranked:
@@ -317,10 +476,15 @@ def plan(ledger: Ledger, signals: dict[str, Signal], d: str, day: int, p: Strate
             if eligible is not None and t not in eligible:
                 continue
             pos = ledger.positions.get(t)
+            if pos is not None and pos.qty > 0 and pos.scaled:
+                continue                                       # scaled out on purpose: no re-buy
             conviction = None
             checks: list[str] = []
-            core = (_core_qty(sig, wealth, core_n.get(t, 0.0), p, pos.avg_price if pos else None, risk.core_mult)
-                    if sig.score > p.core_min_score else 0)
+            waited = day - ledger.start_day
+            ramp = min(1.0, (waited + 1) / p.core_ramp_days) if p.core_ramp_days > 0 else 1.0
+            core = (_core_qty(sig, wealth, core_n.get(t, 0.0), p, pos.avg_price if pos else None,
+                              risk.core_mult * ramp)
+                    if sig.score > p.core_min_score and _entry_ok(sig, p, waited) else 0)
             core_val = core * c
             if (sig.score < p.long_entry or not p.tactical) and core and (pos is None or pos.qty > 0):
                 # passive core only: no tactical signal, but the stock isn't in a downtrend
@@ -333,7 +497,7 @@ def plan(ledger: Ledger, signals: dict[str, Signal], d: str, day: int, p: Strate
                 cap = p.max_position_pct
                 action = "BUY"
                 checks.append(f"score {sig.score:+.2f} >= entry {p.long_entry:+.2f}")
-            elif (p.enable_shorts and pos is None and _short_setup(sig, p)
+            elif (p.enable_shorts and pos is None and t not in ledger.pt_out and _short_setup(sig, p)
                   and (sig.weak or not p.short_weak_only)
                   and breadth <= p.short_max_breadth            # only in a broad bear market
                   and sig.parts.get("regime", 0.0) < 0          # stock in a confirmed downtrend
@@ -363,7 +527,7 @@ def plan(ledger: Ledger, signals: dict[str, Signal], d: str, day: int, p: Strate
             current = pos.qty * c if pos else 0.0
             add = target - current
             if pos is not None:
-                if day - pos.entry_day < p.min_hold_days or add < p.rebalance_band * wealth:
+                if day - pos.entry_day < p.min_hold_days or add < band * wealth:
                     continue
             if action == "BUY":
                 room = long_cap * wealth - long_val
@@ -396,6 +560,8 @@ def plan(ledger: Ledger, signals: dict[str, Signal], d: str, day: int, p: Strate
                        "checks": checks, "reasons": sig.reasons}
             if limited == "core weight":
                 spread = (f"spread over {n_core} stocks" if p.core_weighting == "equal" else
+                          f"weighted by volume flow ({sig.feats.get('vol_flow', 0.0):+.2f}) over {n_core} stocks: "
+                          f"{shares.get(t, 0):.1%} here" if p.core_weighting == "volume" else
                           f"weighted by inverse volatility over {n_core} stocks: {shares.get(t, 0):.1%} here")
                 reason = (f"core position: {p.core_weight:.0%} of wealth {spread} "
                           f"(held through dips; score {sig.score:+.2f})")

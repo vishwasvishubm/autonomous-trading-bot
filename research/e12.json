@@ -1,0 +1,8 @@
+{
+ "base": {},
+ "vol_tilt_25": {"core_weighting": "volume", "volume_tilt": 0.25},
+ "vol_tilt_50": {"core_weighting": "volume", "volume_tilt": 0.5},
+ "vol_tilt_100": {"core_weighting": "volume", "volume_tilt": 1.0},
+ "vol_tilt_50_w100": {"core_weighting": "volume", "volume_tilt": 0.5, "vol_flow_window": 100},
+ "vol_tilt_50_w20": {"core_weighting": "volume", "volume_tilt": 0.5, "vol_flow_window": 20}
+}

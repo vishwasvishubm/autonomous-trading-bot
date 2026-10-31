@@ -1,0 +1,7 @@
+{
+ "base (volume core, day 1)": {},
+ "entry_volume": {"core_entry": "volume"},
+ "entry_volume_wait20": {"core_entry": "volume", "core_entry_wait": 20},
+ "entry_trend_wait20": {"core_entry": "trend", "core_entry_wait": 20},
+ "ramp_10d": {"core_ramp_days": 10}
+}

@@ -109,9 +109,37 @@ class StrategyParams:
     core_min_score: float = -1.0        # don't build a core position in a stock scoring below this
     # "equal": the core is split equally; "inverse_vol": each stock gets a share proportional to
     # 1 / (its daily volatility over rs_window) ** inv_vol_power (calm stocks get more money)
-    core_weighting: str = "equal"
+    # Default "volume" (tilt 1.0): over the 32 episodes mean +108.3% / median +79.3% / worst +42.8%
+    # vs equal weights +102.0 / +72.6 / +42.2; SimTest replay +49.8% vs +43.7% (research/RESULTS.md e12)
+    core_weighting: str = "volume"
     inv_vol_power: float = 1.0
+    # "volume": each stock's share is 1 + volume_tilt x its volume flow (accumulation gets
+    # more, distribution less; floor 0.2) over vol_flow_window days
+    volume_tilt: float = 1.0
+    # hold at most this many stocks in the core: with a big universe (the final pre-flight
+    # listed 50) an even split is ~2% per stock, below min_order_value, and nothing is bought.
+    # Picks the best by core weight (volume flow), then relative strength; held stocks get a
+    # head start so the core doesn't churn (0 = no limit)
+    core_max_stocks: int = 10
+    vol_flow_window: int = 50
+    # volume distribution exit (vd_volume_ratio 0 = off): a long that falls at least vd_drop
+    # in a day on vd_volume_ratio x its average volume, while its volume flow is negative and
+    # it trades below its 20-EMA, is sold in full and leaves the core like a profit-take
+    # (back after pt_cooldown days once the uptrend resumed; with vd_reentry_volume the
+    # volume flow must also have turned positive)
+    vd_volume_ratio: float = 0.0
+    vd_drop: float = 0.03
+    vd_reentry_volume: bool = False
     core_regime_filter: bool = False    # False = the core is held through downtrends too (buy & hold)
+    # smart core entry: buy a stock's core only on a good setup instead of all on day 1.
+    # "trend" = close > 20-EMA > 60-EMA; "volume" = volume flow > 0; "dip" = RSI < 50 inside an
+    # uptrend (close > 100-EMA); "" = no gate. After core_entry_wait days the gate opens anyway
+    # (0 = never). core_ramp_days > 0 spreads the core over that many days (gradual buying).
+    # Default "volume" with a 20-day limit: over the 32 episodes +108.6% mean / +80.7% median vs
+    # +108.3 / +79.3 buying all on day 1 (worst equal); "trend", "dip" and ramps lost 3-26 points (e13-e14)
+    core_entry: str = "volume"
+    core_entry_wait: int = 20
+    core_ramp_days: int = 0
     # Hedge sleeve. A short needs a stock we don't hold, and the core holds every stock, so
     # with weak_bottom_k = 0 shorts cannot open (the default: in every test window shorting
     # cost return; research/RESULTS.md v8-v14). With k > 0, in a sell-off (breadth <= weak_max_breadth)
@@ -156,6 +184,44 @@ class StrategyParams:
     daily_loss_limit: float = 0.03       # one-day loss >= 3% of wealth: no new positions ...
     loss_cooldown_days: int = 2          # ... for this many days
     max_consecutive_rejects: int = 3     # order circuit breaker: pause after N rejects in a row
+
+    # profit-taking exits (pt_min_gain 0 = off). A long up at least pt_min_gain is sold in full
+    # when it falls pt_trail from its best close since entry, or (pt_trend_break) when its
+    # 20-EMA drops below its 60-EMA, or when RSI reaches pt_rsi (0 = off). It leaves the core
+    # (its share goes to the other stocks) until pt_cooldown days have passed and, with
+    # pt_reentry_trend, its uptrend has resumed (20-EMA above 60-EMA, close above the 20-EMA).
+    pt_min_gain: float = 0.0
+    pt_trail: float = 0.0
+    pt_trend_break: bool = False
+    pt_rsi: float = 0.0
+    pt_cooldown: int = 20
+    pt_reentry_trend: bool = True
+    # idle cash above this share of wealth is put back to work in the core at once,
+    # ignoring rebalance_band (0 = off)
+    deploy_idle_cash: float = 0.02
+    # scale-out: at each gain milestone (fraction above cost, e.g. 0.5 = +50%) sell
+    # so_fraction of the position and keep the rest; the core doesn't re-buy it ("" = off)
+    so_levels: str = ""
+    so_fraction: float = 0.25
+    # profit-takes and scale-outs only on holdings over 365 days (10% LTCG, not 15% STCG)
+    pt_long_term_only: bool = False
+    # trend + cap: a stock above cap_trend_weight of wealth whose 20-EMA fell below its
+    # 60-EMA is trimmed to cap_trend_trim_to (0 = off; the normal 30% cap still applies)
+    cap_trend_weight: float = 0.0
+    cap_trend_trim_to: float = 0.15
+    # tax-free gain harvest: in the March harvest window (and in the last gh_final_days of
+    # the game) sell long-term winners and buy them straight back, realizing gains up to
+    # the unused Rs 1 L LTCG exemption of the FY: realized profit at no tax, ~Rs 55 in fees
+    # A re-bought share restarts its 365-day clock, so the cap can't trim that stock at 10%
+    # for a year: gh_march = False harvests only in the final days, gh_max_weight skips
+    # stocks already this big a share of wealth (the cap's next candidates).
+    # On by default: over the 32 episodes it left wealth unchanged (+101.5% mean) and on the
+    # SimTest replay it realized Rs 1.97 L instead of Rs 48 k at no tax (research/RESULTS.md e10).
+    gain_harvest: bool = True
+    gh_march: bool = True
+    gh_max_weight: float = 0.20
+    gh_final_days: int = 5
+    gh_min_gain: float = 5_000.0
 
     # tax optimisation
     ltcg_defer_window: int = 30          # defer soft exits this close to 365 days

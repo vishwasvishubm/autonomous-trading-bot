@@ -1,0 +1,18 @@
+{
+ "base": {},
+ "deploy_only": {"deploy_idle_cash": 0.02},
+ "trail15_gain20": {"pt_min_gain": 0.2, "pt_trail": 0.15, "deploy_idle_cash": 0.02},
+ "trail20_gain20": {"pt_min_gain": 0.2, "pt_trail": 0.20, "deploy_idle_cash": 0.02},
+ "trail25_gain30": {"pt_min_gain": 0.3, "pt_trail": 0.25, "deploy_idle_cash": 0.02},
+ "trail20_gain50": {"pt_min_gain": 0.5, "pt_trail": 0.20, "deploy_idle_cash": 0.02},
+ "trail30_gain50": {"pt_min_gain": 0.5, "pt_trail": 0.30, "deploy_idle_cash": 0.02},
+ "trail15_gain10": {"pt_min_gain": 0.1, "pt_trail": 0.15, "deploy_idle_cash": 0.02},
+ "trend_gain20": {"pt_min_gain": 0.2, "pt_trend_break": true, "deploy_idle_cash": 0.02},
+ "trend_gain50": {"pt_min_gain": 0.5, "pt_trend_break": true, "deploy_idle_cash": 0.02},
+ "rsi80_gain30": {"pt_min_gain": 0.3, "pt_rsi": 80, "deploy_idle_cash": 0.02},
+ "rsi75_gain20": {"pt_min_gain": 0.2, "pt_rsi": 75, "deploy_idle_cash": 0.02},
+ "trail20_gain20_fast_reentry": {"pt_min_gain": 0.2, "pt_trail": 0.20, "pt_reentry_trend": false, "pt_cooldown": 10, "deploy_idle_cash": 0.02},
+ "trail20_gain20_cd40": {"pt_min_gain": 0.2, "pt_trail": 0.20, "pt_cooldown": 40, "deploy_idle_cash": 0.02},
+ "rebalance_15": {"max_stock_weight": 0.15, "cap_trim_to": 0.11, "cap_hard_weight": 0.15, "deploy_idle_cash": 0.02},
+ "rebalance_20": {"max_stock_weight": 0.20, "cap_trim_to": 0.15, "cap_hard_weight": 0.20, "deploy_idle_cash": 0.02}
+}

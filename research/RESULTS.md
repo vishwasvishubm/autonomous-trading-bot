@@ -114,3 +114,64 @@ Lower drawdowns, but much lower returns: in this data the volatile stocks (PLNX)
 
 - The bot's decayed news score vs the next day's return: t = 1.29.
 - Verdict: no edge on the day the bot can trade. The 5-day hint is weak, because overlapping windows and testing 3 horizons inflate the t-stat, and it comes from one dataset. Trading it would mean selling the core (fees, 15% STCG), so news stays a logged, explained input, not a trade trigger.
+
+## Profit-taking (2026-10-30, e6-e10)
+
+Asked: realize more profit instead of holding it unrealized, exit winners at the right spot.
+Every variant keeps the 30% cap. 32 episodes (mean / median / worst after tax) and the SimTest replay.
+
+| Variant | Mean | Median | Worst | Mean tax | SimTest replay | Realized on replay |
+|---|---|---|---|---|---|---|
+| base (99% core, cap 30%) | 101.5 | 72.6 | 42.6 | 4,658 | 14,36,954 | 48,157 |
+| trailing stop 15-30% after +10-50% | 60-79 | 44-58 | 15-27 | 30-78 k | - | - |
+| trend-break exit after +20% | 103.4 | 75.6 | 28.7 | 78,983 | 12,72,444 | 2,53,279 |
+| RSI 75-80 exit | 61-75 | 49-57 | 26-27 | 1 L+ | - | - |
+| rebalance to 11-15% | 75-86 | 58-63 | 28-30 | 14-16 k | - | - |
+| scale-out 25% at +50/+100%, long-term only | 94.3 | 74.8 | 41.5 | 7,868 | 14,48,862 | 1,01,056 |
+| trend + cap (20% and trend broken) | no trigger | | | | 14,36,954 | 48,157 |
+| idle cash redeployed (2%) | 102.1 | 72.6 | 42.6 | 4,722 | 14,36,954 | 48,157 |
+| **tax-free gain harvest (March + last 5 days, skip >20% holdings)** | **101.5** | 72.6 | 42.2 | 4,530 | **14,36,677** | **1,96,915** |
+
+Adopted as default: tax-free gain harvest (`gain_harvest`, `gh_final_days=5`, `gh_max_weight=0.20`) and
+`deploy_idle_cash=0.02`. The harvest re-buys at once, so wealth is unchanged and the realized share of
+profit rises 4x at no tax. Harvesting in March without the 20% limit cost ~4 points on the replay: the
+re-buy restarts the 365-day clock, so the cap could not trim the biggest winner at 10%.
+Scale-out is built (`so_levels`, `pt_long_term_only`) but off: it gains on the SimTest data and in the
+median but costs 7 points of mean return (it sells part of the 10x winners).
+
+## Volume strategy (2026-10-30, e11-e12)
+
+New features: `vol_flow` (up-day minus down-day volume share over 50 days, in [-1, 1]) and `ret1`.
+Two uses: the core weighted by volume flow (`core_weighting="volume"`, share = max(0.2, 1 + tilt x flow)),
+and a distribution exit (sell on a heavy-volume down day in a distribution phase, back on a new uptrend).
+
+| Variant | Mean | Median | Worst | Beat B&H | Mean tax | SimTest replay |
+|---|---|---|---|---|---|---|
+| equal weights (with gain harvest) | 102.0 | 72.6 | 42.2 | 12.5% | 4,684 | 14,36,677 (+43.7%) |
+| volume tilt 0.25 | 103.3 | 71.0 | 43.5 | 18.8% | 4,263 | 14,61,781 |
+| volume tilt 0.5 | 104.2 | 70.7 | 44.1 | 25.0% | 5,087 | 14,77,178 |
+| **volume tilt 1.0 (default)** | **108.3** | **79.3** | **42.8** | **56.2%** | 12,079 | **14,97,998 (+49.8%)** |
+| tilt 0.5, 100-day flow | 103.9 | 72.2 | 44.0 | 21.9% | 4,128 | 14,68,179 |
+| tilt 0.5, 20-day flow | 103.4 | 76.8 | 37.4 | 25.0% | 10,338 | 14,73,653 |
+| distribution exit (4 variants) | - | - | - | - | - | 11.99-12.72 L (-18 to -24 points) |
+
+The distribution exit is built (`vd_volume_ratio`) but off. Caveat: on the single 4-year window traded from
+2022 the volume core returned +254% after tax vs +290% for equal weights; the live-length episodes are the
+basis for the choice.
+
+## Smart core entry (2026-10-30, e13-e14)
+
+Asked: don't buy everything on day 1, buy a stock only when it looks set to gain.
+
+| Entry rule | Mean | Median | Worst | SimTest replay |
+|---|---|---|---|---|
+| all on day 1 (volume core) | 108.3 | 79.3 | 42.8 | 14,97,998 |
+| **volume flow > 0, else buy after 20 days (default)** | **108.6** | **80.7** | **42.8** | 14,94,245 |
+| volume flow > 0, no time limit | 108.5 | 81.1 | 42.8 | 14,84,341 |
+| uptrend (close > 20-EMA > 60-EMA), 20-day limit | 104.8 | 78.8 | 43.6 | 14,67,415 |
+| buy in 10 / 30 / 60 daily steps | 104.9 (10d) | 76.9 | 36.9 | 13.96 / 12.51 / 11.91 L |
+| dip (RSI < 50 in an uptrend) | - | - | - | 12.38 L |
+
+Volume-gated entry ties buying on day 1 (+0.3 mean, -Rs 3.7 k on the replay) and was adopted as asked.
+Waiting has a visible cost on big up days: in the live paper run the bot was 45% invested on 2025-04-09
+when the market rose +10.4%.

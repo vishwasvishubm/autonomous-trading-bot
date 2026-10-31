@@ -1,0 +1,14 @@
+{
+ "base": {},
+ "1_gain_harvest_march": {"gain_harvest": true},
+ "1+4_gain_harvest_march+final": {"gain_harvest": true, "gh_final_days": 5},
+ "2_scale_out_50_100": {"so_levels": "0.5,1.0", "deploy_idle_cash": 0.02},
+ "2_scale_out_100_200": {"so_levels": "1.0,2.0", "deploy_idle_cash": 0.02},
+ "2+3_scale_out_50_100_lt": {"so_levels": "0.5,1.0", "pt_long_term_only": true, "deploy_idle_cash": 0.02},
+ "2+3_scale_out_100_200_lt": {"so_levels": "1.0,2.0", "pt_long_term_only": true, "deploy_idle_cash": 0.02},
+ "3_trend_exit_lt": {"pt_min_gain": 0.2, "pt_trend_break": true, "pt_long_term_only": true, "pt_cooldown": 40, "deploy_idle_cash": 0.02},
+ "5_trend_cap_20": {"cap_trend_weight": 0.20, "cap_trend_trim_to": 0.15, "deploy_idle_cash": 0.02},
+ "5_trend_cap_15": {"cap_trend_weight": 0.15, "cap_trend_trim_to": 0.12, "deploy_idle_cash": 0.02},
+ "combo_1+4+5": {"gain_harvest": true, "gh_final_days": 5, "cap_trend_weight": 0.20, "cap_trend_trim_to": 0.15, "deploy_idle_cash": 0.02},
+ "combo_1+4+2+3": {"gain_harvest": true, "gh_final_days": 5, "so_levels": "1.0,2.0", "pt_long_term_only": true, "deploy_idle_cash": 0.02}
+}

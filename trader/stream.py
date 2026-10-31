@@ -16,6 +16,7 @@ from .config import Config
 
 log = logging.getLogger("stream")
 TOPICS = ("market.ticks", "market.news")
+NO_PARTITIONS_S = 20.0      # rejoin the group if no partitions are assigned for this long
 
 
 def _decode(raw: bytes):
@@ -76,9 +77,17 @@ class KafkaFeed:
                 self.connected[idx] = True
                 backoff = 1.0
                 log.info("consumer %d connected to %s as %s", idx, self.cfg.broker, self.group_id)
+                last_assigned = time.monotonic()
                 while not self.stop.is_set():
                     batch = consumer.poll(timeout_ms=200)
                     now = time.monotonic()
+                    # a join that raced the topic metadata can end with no partitions and stay
+                    # that way: no ticks, ever. Rejoin if we hold none for NO_PARTITIONS_S.
+                    if consumer.assignment():
+                        last_assigned = now
+                    elif now - last_assigned > NO_PARTITIONS_S:
+                        log.warning("consumer %d has no partitions after %.0fs: rejoining", idx, NO_PARTITIONS_S)
+                        break
                     for records in batch.values():
                         for rec in records:
                             if rec.value is not None:

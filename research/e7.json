@@ -1,0 +1,10 @@
+{
+ "base": {},
+ "deploy_only": {"deploy_idle_cash": 0.02},
+ "trend_gain20": {"pt_min_gain": 0.2, "pt_trend_break": true, "deploy_idle_cash": 0.02},
+ "trend_gain10": {"pt_min_gain": 0.1, "pt_trend_break": true, "deploy_idle_cash": 0.02},
+ "trend_gain30": {"pt_min_gain": 0.3, "pt_trend_break": true, "deploy_idle_cash": 0.02},
+ "trend_gain20_cd10": {"pt_min_gain": 0.2, "pt_trend_break": true, "pt_cooldown": 10, "deploy_idle_cash": 0.02},
+ "trend_gain20_cd40": {"pt_min_gain": 0.2, "pt_trend_break": true, "pt_cooldown": 40, "deploy_idle_cash": 0.02},
+ "trend_gain20_nocheck": {"pt_min_gain": 0.2, "pt_trend_break": true, "pt_reentry_trend": false, "deploy_idle_cash": 0.02}
+}

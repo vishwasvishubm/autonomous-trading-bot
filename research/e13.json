@@ -1,0 +1,13 @@
+{
+ "base (volume core, day 1)": {},
+ "entry_trend": {"core_entry": "trend"},
+ "entry_trend_wait20": {"core_entry": "trend", "core_entry_wait": 20},
+ "entry_volume": {"core_entry": "volume"},
+ "entry_volume_wait20": {"core_entry": "volume", "core_entry_wait": 20},
+ "entry_dip": {"core_entry": "dip"},
+ "entry_dip_wait20": {"core_entry": "dip", "core_entry_wait": 20},
+ "entry_score_pos": {"core_min_score": 0.0},
+ "ramp_10d": {"core_ramp_days": 10},
+ "ramp_30d": {"core_ramp_days": 30},
+ "ramp_60d": {"core_ramp_days": 60}
+}

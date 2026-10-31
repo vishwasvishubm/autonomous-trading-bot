@@ -1,0 +1,12 @@
+{
+ "base": {},
+ "4_gain_harvest_final_only": {"gain_harvest": true, "gh_march": false, "gh_final_days": 5},
+ "1+4_harvest_skip_big20": {"gain_harvest": true, "gh_final_days": 5, "gh_max_weight": 0.20},
+ "1+4_harvest_skip_big15": {"gain_harvest": true, "gh_final_days": 5, "gh_max_weight": 0.15},
+ "2+3_so_50_100_lt": {"so_levels": "0.5,1.0", "pt_long_term_only": true, "deploy_idle_cash": 0.02},
+ "2+3_so_50_100_150_lt": {"so_levels": "0.5,1.0,1.5", "pt_long_term_only": true, "deploy_idle_cash": 0.02},
+ "2+3_so_30_60_lt": {"so_levels": "0.3,0.6", "pt_long_term_only": true, "deploy_idle_cash": 0.02},
+ "2+3_so_50_100_lt_f33": {"so_levels": "0.5,1.0", "so_fraction": 0.33, "pt_long_term_only": true, "deploy_idle_cash": 0.02},
+ "all_final_harvest+so50_100_lt": {"gain_harvest": true, "gh_march": false, "gh_final_days": 5, "so_levels": "0.5,1.0", "pt_long_term_only": true, "deploy_idle_cash": 0.02},
+ "all_harvest_skip20+so50_100_lt": {"gain_harvest": true, "gh_final_days": 5, "gh_max_weight": 0.20, "so_levels": "0.5,1.0", "pt_long_term_only": true, "deploy_idle_cash": 0.02}
+}

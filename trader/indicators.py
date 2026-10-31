@@ -105,6 +105,11 @@ def features(bars: Sequence[dict], p) -> dict | None:
     rv_l = stdev(rets_l, len(rets_l)) or 1e-9
     mom_long = (c / closes[-1 - n_rs] - 1) / (rv_l * math.sqrt(n_rs))
     avg_vol = sma(vols[:-1], p.vol_window) if len(vols) > 1 else 0
+    # volume flow: share of the last vol_flow_window days' volume traded on up days minus
+    # down days, in [-1, 1] (+1 = all volume on up days: accumulation; -1 = distribution)
+    n_vf = min(getattr(p, "vol_flow_window", 50), len(closes) - 1)
+    up = sum(vols[i] for i in range(len(closes) - n_vf, len(closes)) if closes[i] > closes[i - 1])
+    down = sum(vols[i] for i in range(len(closes) - n_vf, len(closes)) if closes[i] < closes[i - 1])
     # long-term regime: where price sits vs the slow EMA, and which way that EMA is sloping
     span = closes[-4 * p.ema_trend:]
     ema_t = ema(span, p.ema_trend)
@@ -125,4 +130,6 @@ def features(bars: Sequence[dict], p) -> dict | None:
         "mom_long": mom_long,
         "vol_long": rv_l,                 # stdev of daily returns over rs_window (core weighting)
         "vol_ratio": (vols[-1] / avg_vol) if avg_vol > 0 else 1.0,
+        "vol_flow": (up - down) / (up + down) if up + down > 0 else 0.0,
+        "ret1": c / closes[-2] - 1 if closes[-2] else 0.0,
     }

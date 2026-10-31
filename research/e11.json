@@ -1,0 +1,12 @@
+{
+ "base": {},
+ "vol_tilt_25": {"core_weighting": "volume", "volume_tilt": 0.25},
+ "vol_tilt_50": {"core_weighting": "volume", "volume_tilt": 0.5},
+ "vol_tilt_100": {"core_weighting": "volume", "volume_tilt": 1.0},
+ "vol_tilt_50_w100": {"core_weighting": "volume", "volume_tilt": 0.5, "vol_flow_window": 100},
+ "vol_tilt_50_w20": {"core_weighting": "volume", "volume_tilt": 0.5, "vol_flow_window": 20},
+ "vd_2x_3pct": {"vd_volume_ratio": 2.0, "vd_drop": 0.03},
+ "vd_2.5x_5pct": {"vd_volume_ratio": 2.5, "vd_drop": 0.05},
+ "vd_2x_3pct_volreentry": {"vd_volume_ratio": 2.0, "vd_drop": 0.03, "vd_reentry_volume": true},
+ "vd_1.5x_3pct_cd10": {"vd_volume_ratio": 1.5, "vd_drop": 0.03, "pt_cooldown": 10}
+}

@@ -36,6 +36,7 @@ class Position:
     peak: float                   # best close since entry (high for long, low for short)
     stop: float = 0.0
     last_buy_date: str = ""       # most recent BUY into this position ("" = entry_date)
+    scaled: int = 0               # profit milestones already sold into (scale-out)
 
     @property
     def is_short(self) -> bool:
@@ -58,6 +59,8 @@ class Ledger:
     orders: int = 0
     no_entry_until: dict[str, int] = field(default_factory=dict)   # ticker -> trading day (re-entry cooldown)
     harvest_carry: dict[str, tuple] = field(default_factory=dict)  # ticker -> (stop, peak) across a harvest re-buy
+    pt_out: dict[str, int] = field(default_factory=dict)          # ticker -> trading day of its profit-take exit
+    start_day: int = -1                                            # first trading day planned (gradual entry)
 
     # ---------------------------------------------------------------- valuation
     def long_value(self, prices: dict[str, float]) -> float:
